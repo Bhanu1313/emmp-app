@@ -2,44 +2,39 @@ import streamlit as st
 import pandas as pd
 import joblib
 import os
-import gdown
-from features import FEATURES  # This should be a list of features used in the model
+from huggingface_hub import hf_hub_download
+from features import FEATURES  # This file must contain the list of features
 
-# --- Google Drive File IDs ---
-model_id = "1Cfop7fwMFQ4oXZ5pB2VvQvAOH2j1wG0w"
-scaler_id = "1yyls9X4vz7C_4bcUWna-sk2PmFl8g55M"
-encoders_id = "1mFu7kQR4JEsUwQvJCxmQ9pw1yecMaljG"
+# --- Hugging Face Hub Info ---
+REPO_ID = "your-username/income-predictor"  # Change this to your actual HF repo
 
-# --- Local file paths ---
+# --- Local Paths ---
 MODEL_PATH = "model.pkl"
 SCALER_PATH = "scaler.pkl"
 ENCODERS_PATH = "encoders.pkl"
 
-# --- Download missing files using gdown ---
+# --- Download from Hugging Face Hub if not present ---
 if not os.path.exists(MODEL_PATH):
-    model_url = f"https://drive.google.com/uc?id={model_id}"
-    gdown.download(model_url, MODEL_PATH, quiet=False)
+    MODEL_PATH = hf_hub_download(repo_id=REPO_ID, filename="model.pkl")
 
 if not os.path.exists(SCALER_PATH):
-    scaler_url = f"https://drive.google.com/uc?id={scaler_id}"
-    gdown.download(scaler_url, SCALER_PATH, quiet=False)
+    SCALER_PATH = hf_hub_download(repo_id=REPO_ID, filename="scaler.pkl")
 
 if not os.path.exists(ENCODERS_PATH):
-    encoders_url = f"https://drive.google.com/uc?id={encoders_id}"
-    gdown.download(encoders_url, ENCODERS_PATH, quiet=False)
+    ENCODERS_PATH = hf_hub_download(repo_id=REPO_ID, filename="encoders.pkl")
 
-# --- Load pre-trained components ---
+# --- Load all components ---
 model = joblib.load(MODEL_PATH)
 scaler = joblib.load(SCALER_PATH)
 encoders = joblib.load(ENCODERS_PATH)
 
-# --- Streamlit App Layout ---
+# --- Streamlit Layout ---
 st.set_page_config(page_title="Income Prediction", layout="centered")
 
 st.title("💰 Income Prediction App")
 st.markdown("Provide your details below to predict your income category:")
 
-# --- Collect user input ---
+# --- Collect User Input ---
 user_input = {
     'age': st.slider("Age", 18, 100, 30),
     'education': st.selectbox("Education", encoders['education'].classes_),
@@ -52,17 +47,16 @@ user_input = {
 if st.button("Predict Income"):
     input_df = pd.DataFrame([user_input])
 
-    # Encode categorical columns using loaded encoders
+    # Encode categorical columns
     for col in input_df.columns:
         if col in encoders:
             input_df[col] = encoders[col].transform(input_df[col])
 
-    # Scale the input
+    # Scale numeric data
     input_scaled = scaler.transform(input_df)
 
-    # Predict income
+    # Predict
     prediction = model.predict(input_scaled)[0]
 
-    # Show result
     st.success(f"Predicted Income: **{prediction}**")
     st.balloons()
