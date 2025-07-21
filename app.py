@@ -1,14 +1,40 @@
 import streamlit as st
 import pandas as pd
 import joblib
-from features import FEATURES
+import os
+import gdown
+from features import FEATURES  # List of required features for the model
 
-# Load model, scaler, encoders
-model = joblib.load("model.pkl")
-scaler = joblib.load("scaler.pkl")
-encoders = joblib.load("encoders.pkl")
+# File paths and URLs
+#MODEL_URL = "https://drive.google.com/uc?id=1T06Ndwy7av1-qY_GQ5ukBjKigUktfIN4&export=download"
+MODEL_URL = "https://drive.google.com/uc?id=1Cfop7fwMFQ4oXZ5pB2VvQvAOH2j1wG0w"
+SCALER_URL = "https://drive.google.com/uc?id=1yyls9X4vz7C_4bcUWna-sk2PmFl8g55M"
+ENCODERS_URL = "https://drive.google.com/uc?id=1mFu7kQR4JEsUwQvJCxmQ9pw1yecMaljG"
 
-# Page config
+MODEL_PATH = "model.pkl"
+SCALER_PATH = "scaler.pkl"
+ENCODERS_PATH = "encoders.pkl"
+# Download the files if they do not exist
+if not os.path.exists(MODEL_PATH):
+    gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
+
+if not os.path.exists(SCALER_PATH):
+    gdown.download(SCALER_URL, SCALER_PATH, quiet=False)
+
+if not os.path.exists(ENCODERS_PATH):
+    gdown.download(ENCODERS_URL, ENCODERS_PATH, quiet=False)
+
+
+# Download model if not available
+if not os.path.exists(MODEL_PATH):
+    gdown.download(MODEL_URL, MODEL_PATH, quiet=False)
+
+# Load model and other components
+model = joblib.load(MODEL_PATH)
+scaler = joblib.load(SCALER_PATH)
+encoders = joblib.load(ENCODERS_PATH)
+
+# Page Configuration
 st.set_page_config(
     page_title="Income Prediction 📈",
     page_icon="💰",
@@ -16,13 +42,11 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Custom CSS with professional dark theme and pastel accents
+# Custom styling
 st.markdown("""
     <style>
         body {
             background-color: #1a202c;
-            margin: 0;
-            padding: 0;
         }
         .main {
             background-color: #2d3748;
@@ -35,10 +59,9 @@ st.markdown("""
         }
         .header {
             background-color: #4a5568;
-            padding: 1rem 2rem;
+            padding: 1rem;
             border-radius: 10px 10px 0 0;
             text-align: center;
-            margin: -2.5rem -2.5rem 2rem -2.5rem;
             color: #a3bffa;
             font-size: 2em;
             font-weight: bold;
@@ -50,28 +73,15 @@ st.markdown("""
             margin-bottom: 2rem;
             animation: fadeIn 2s ease-in-out;
         }
-        .stSlider > div > div > div {
-            background-color: #4c51bf;
-        }
-        .stSlider > div > div > div > div {
-            background-color: #90cdf4;
-        }
-        .stSelectbox > div > div {
-            background-color: #2d3748;
-            border: 1px solid #4c51bf;
-            border-radius: 10px;
-            color: #a0aec0;
-        }
         .stButton>button {
             background-color: #4c51bf;
             color: white;
             padding: 0.7em 2em;
             font-size: 16px;
             border-radius: 10px;
-            transition: all 0.3s ease;
             border: none;
+            margin: auto;
             display: block;
-            margin: 0 auto;
         }
         .stButton>button:hover {
             background-color: #2a4365;
@@ -87,40 +97,41 @@ st.markdown("""
 # Main content wrapper
 st.markdown("<div class='main'>", unsafe_allow_html=True)
 
-# Header with title inside the top box
+# Header
 st.markdown("<div class='header'>📈 Income Prediction 💰</div>", unsafe_allow_html=True)
 st.markdown("<div class='subtitle'>Fill in the details below and click Predict! 🌟</div>", unsafe_allow_html=True)
 
-# User Inputs
-user_input = {}
-user_input['age'] = st.slider("📅 Age", min_value=18, max_value=100, value=30)
-user_input['education'] = st.selectbox("🎓 Education Level", encoders['education'].classes_)
-user_input['occupation'] = st.selectbox("💼 Occupation", encoders['occupation'].classes_)
-user_input['hours-per-week'] = st.slider("⏳ Hours Worked per Week", 1, 100, 40)
-user_input['gender'] = st.selectbox("👤 Gender", encoders['gender'].classes_)
+# --- User Input ---
+user_input = {
+    'age': st.slider("📅 Age", 18, 100, 30),
+    'education': st.selectbox("🎓 Education Level", encoders['education'].classes_),
+    'occupation': st.selectbox("💼 Occupation", encoders['occupation'].classes_),
+    'hours-per-week': st.slider("⏳ Hours Worked per Week", 1, 100, 40),
+    'gender': st.selectbox("👤 Gender", encoders['gender'].classes_)
+}
 
-# Predict button
+# --- Prediction ---
 if st.button("🔍 Predict Income"):
     input_df = pd.DataFrame([user_input])
 
-    # Encode categorical
-    for col in input_df.select_dtypes(include='object').columns:
-        input_df[col] = encoders[col].transform(input_df[col])
+    # Encode categorical features
+    for col in input_df.columns:
+        if input_df[col].dtype == object:
+            input_df[col] = encoders[col].transform(input_df[col])
 
-    # Scale
+    # Scale numerical features
     input_scaled = scaler.transform(input_df)
 
     # Predict
     prediction = model.predict(input_scaled)[0]
 
-    # Result
+    # Output
     st.markdown("---")
     st.markdown(
         f"<h3 style='color: #90cdf4; text-align: center;'>🎯 Predicted Income Class: <span style='color: #a0aec0'>{prediction}</span></h3>",
         unsafe_allow_html=True
     )
-
     st.balloons()
 
-# Close main wrapper
+# Close wrapper
 st.markdown("</div>", unsafe_allow_html=True)
