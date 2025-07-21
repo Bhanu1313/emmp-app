@@ -3,11 +3,10 @@ import pandas as pd
 import joblib
 import os
 from huggingface_hub import hf_hub_download
-from features import FEATURES  # This file must contain the list of features
+from features import FEATURES  # This file must contain t
 
 # --- Hugging Face Hub Info ---
-REPO_ID = "your-username/income-predictor"  # Change this to your actual HF repo
-
+REPO_ID = "Bhanu1313/emmp-app"  # Change this to your actual HF repo
 # --- Local Paths ---
 MODEL_PATH = "model.pkl"
 SCALER_PATH = "scaler.pkl"
